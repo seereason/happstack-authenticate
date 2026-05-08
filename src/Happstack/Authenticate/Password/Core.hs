@@ -5,8 +5,10 @@ import Control.Applicative ((<$>), optional)
 import Control.Monad.Trans (MonadIO(..))
 import Control.Lens  ((?~), (^.), (.=), (?=), assign, makeLenses, set, use, view, over)
 import Control.Lens.At (at)
+#if !defined(javascript_HOST_ARCH)
 import qualified Crypto.PasswordStore as PasswordStore
 import Crypto.PasswordStore          (genSaltIO, exportSalt, makePassword)
+#endif
 -- import Data.Acid          (AcidState, Query, Update, closeAcidState, makeAcidic)
 -- import Data.Acid.Advanced (query', update')
 -- import Data.Acid.Local    (createCheckpointAndClose, openLocalStateFrom)
@@ -106,6 +108,7 @@ newtype HashedPass = HashedPass { _unHashedPass :: ByteString }
 deriveSafeCopy 1 'base ''HashedPass
 makeLenses ''HashedPass
 
+#if !defined(javascript_HOST_ARCH)
 -- | hash a password string
 mkHashedPass :: (Functor m, MonadIO m) =>
                 Text         -- ^ password in plain text
@@ -118,7 +121,7 @@ verifyHashedPass :: Text       -- ^ password in plain text
                  -> Bool
 verifyHashedPass passwd (HashedPass hashedPass) =
     PasswordStore.verifyPassword (Text.encodeUtf8 passwd) hashedPass
-
+#endif
 
 ------------------------------------------------------------------------------
 -- API

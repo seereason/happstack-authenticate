@@ -49,7 +49,7 @@ import Dominator.DOMC
 import Dominator.JSDOM
 import GHCJS.Marshal(toJSVal, fromJSVal)
 import GHCJS.Foreign.Export (Export, export, derefExport)
-import GHCJS.Foreign.Callback (OnBlocked(..), Callback, syncCallback1, OnBlocked(ContinueAsync))
+import GHC.JS.Foreign.Callback (OnBlocked(..), Callback, syncCallback1, OnBlocked(ContinueAsync))
 import GHCJS.Nullable (Nullable(..), nullableToMaybe, maybeToNullable)
 import GHCJS.Types (JSVal, jsval)
 import Happstack.Authenticate.Core (ClientInitData(..), Email(..), User(..), Username(..), AuthenticateURL(AmAuthenticated, AuthenticationMethods, InitClient, Logout), AuthenticationMethod(..), JSONResponse(..), Status(..), jsonOptions)
@@ -472,7 +472,7 @@ extractJWT modelTV jr =
     Ok ->
       case (_jrData jr) of
         (Object object) ->
-          case KM.lookup ("token" :: Text) object of
+          case KM.lookup ("token") object of
 --            (Just (String tkn)) ->
 --              updateAuthenticateModelFromToken modelTV tkn
             (Just o) ->
