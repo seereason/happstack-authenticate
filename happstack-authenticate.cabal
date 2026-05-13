@@ -24,13 +24,8 @@ flag Debug
     Default: False
     Manual: True
 
-flag ghc9
-  description: Native xx  ghc 9.xx, where the version supports the js backend. This flag is set in the cabalProjectLocal of the calling flake.
-  default: False
-  manual: True
-
-flag ghc9-js
-  description: ghc 9.xx, JS backend.  This flag is set in the cabalProjectLocal of the calling flake.
+flag arch_javascript
+  description: Stand-in for arch(javascript). Remove if not using haskell.nix.
   default: False
   manual: True
 
@@ -66,7 +61,7 @@ common shared-ghcjs-properties
   if impl(ghcjs)
     build-depends:  ghcjs-base, ghcjs-dom
   if arch(javascript)
-    build-depends:  ghcjs-base >= 0.8.0.0, ghcjs-dom-javascript >= 0.9.9.0
+    build-depends:  ghcjs-base >= 0.8.0.2, ghcjs-dom-javascript >= 0.9.9.3
 
 Library
   import:              shared-properties
@@ -85,9 +80,8 @@ Library
    Exposed-modules:
                         Happstack.Authenticate.Client
 
-  -- flag(ghc9-js) works for haskell.nix in place of arch(javascript)
-  -- for hiding native packages
-  if !(impl(ghcjs) || flag(ghc9-js))
+  -- flag(arch_javascript): stand-in for arch(javascript); remove if not using haskell.nix.
+  if !(impl(ghcjs) || flag(arch_javascript))
    Exposed-modules:
                         Happstack.Authenticate.Handlers
                         Happstack.Authenticate.Route
@@ -120,7 +114,8 @@ Library
                        web-routes-boomerang         >= 0.28 && < 0.29,
                        web-routes-th                >= 0.22 && < 0.23,
 
-  if !(impl(ghcjs) || flag(ghc9-js))
+  -- flag(arch_javascript): stand-in for arch(javascript); remove if not using haskell.nix.
+  if !(impl(ghcjs) || flag(arch_javascript))
     Build-depends:
                        acid-state                   >= 0.6  && < 0.17,
                        authenticate                 == 1.3.*,
