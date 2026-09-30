@@ -139,7 +139,7 @@ import qualified Data.Map              as Map
 import Data.Maybe                      (fromMaybe, maybeToList)
 import Data.Monoid                     ((<>), mconcat, mempty)
 import Data.SafeCopy                   (SafeCopy, Migrate(..), base, deriveSafeCopy, extension)
-#if !defined(javascript_HOST_ARCH)
+#if !(defined(javascript_HOST_ARCH) || defined(wasm32_HOST_ARCH))
 import Data.IxSet.Typed
 import qualified Data.IxSet.Typed      as IxSet
 #endif
@@ -244,7 +244,7 @@ makeLenses ''User
 instance ToJSON   User where toJSON    = genericToJSON    jsonOptions
 instance FromJSON User where parseJSON = genericParseJSON jsonOptions
 
-#if !defined(javascript_HOST_ARCH)
+#if !(defined(javascript_HOST_ARCH) || defined(wasm32_HOST_ARCH))
 type UserIxs = '[UserId, Username, Email]
 type IxUser  = IxSet UserIxs User
 

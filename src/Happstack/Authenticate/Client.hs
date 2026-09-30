@@ -13,6 +13,10 @@
 {-# LANGUAGE TypeOperators #-}
 module Happstack.Authenticate.Client where
 
+#if defined(wasm32_HOST_ARCH)
+import GHC.JS.Foreign.Callback (Callback(..))
+import GHCJS.Types (JSString(..))
+#endif
 import Control.Monad.Reader (ask)
 import Control.Monad.Trans (MonadIO(liftIO))
 import Control.Concurrent (threadDelay)
@@ -1153,7 +1157,12 @@ mapNodes f nodeList =
 
 
 
+#if defined(wasm32_HOST_ARCH)
+-- The wasm glue is a strict-mode module: define the global explicitly.
+foreign import javascript unsafe "globalThis.initHappstackAuthenticateClient = $1"
+#else
 foreign import javascript unsafe "initHappstackAuthenticateClient = $1"
+#endif
   set_initHappstackAuthenticateClient :: JSVal -> IO ()
 {-
 foreign import javascript unsafe "happstackAuthenticateClientPlugins = $1"
@@ -1167,7 +1176,11 @@ setHappstackAuthenticateClientPlugins tvar =
 
 -- FIXME: this should be Nullable, but it seems to throw a runtime error. So
 -- I guess I am not using Nullable correctly
+#if defined(wasm32_HOST_ARCH)
+foreign import javascript unsafe "let $r; $r = happstackAuthenticateClientPlugins; return $r;"
+#else
 foreign import javascript unsafe "$r = happstackAuthenticateClientPlugins"
+#endif
   js_getHappstackAuthenticateClientPlugins :: IO (Nullable JSVal)
 
 getHappstackAuthenticateClientPlugins :: IO (Maybe (TVar [(Text, SignupPlugin)]))
@@ -1188,7 +1201,11 @@ appendHappstackAuthenticateClientPlugin newPlugin =
             pure $ Right ()
 -}
 
+#if defined(wasm32_HOST_ARCH)
+foreign import javascript unsafe "globalThis.happstackAuthenticateClientPlugins = $1"
+#else
 foreign import javascript unsafe "happstackAuthenticateClientPlugins = $1"
+#endif
   js_setHappstackAuthenticateClientPlugins :: JSVal -> IO ()
 
 setHappstackAuthenticateClientPlugins :: [(Text, SignupPlugin)] -> IO (Export [(Text, SignupPlugin)])
@@ -1199,7 +1216,11 @@ setHappstackAuthenticateClientPlugins sps =
 
 -- FIXME: this should be Nullable, but it seems to throw a runtime error. So
 -- I guess I am not using Nullable correctly
+#if defined(wasm32_HOST_ARCH)
+foreign import javascript unsafe "let $r; $r = happstackAuthenticateClientPlugins; return $r;"
+#else
 foreign import javascript unsafe "$r = happstackAuthenticateClientPlugins"
+#endif
   js_getHappstackAuthenticateClientPlugins :: IO JSVal
 
 getHappstackAuthenticateClientPlugins :: IO (Maybe [(Text, SignupPlugin)])

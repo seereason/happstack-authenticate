@@ -5,7 +5,7 @@ import Control.Applicative ((<$>), optional)
 import Control.Monad.Trans (MonadIO(..))
 import Control.Lens  ((?~), (^.), (.=), (?=), assign, makeLenses, set, use, view, over)
 import Control.Lens.At (at)
-#if !defined(javascript_HOST_ARCH)
+#if !(defined(javascript_HOST_ARCH) || defined(wasm32_HOST_ARCH))
 import qualified Crypto.PasswordStore as PasswordStore
 import Crypto.PasswordStore          (genSaltIO, exportSalt, makePassword)
 #endif
@@ -108,7 +108,7 @@ newtype HashedPass = HashedPass { _unHashedPass :: ByteString }
 deriveSafeCopy 1 'base ''HashedPass
 makeLenses ''HashedPass
 
-#if !defined(javascript_HOST_ARCH)
+#if !(defined(javascript_HOST_ARCH) || defined(wasm32_HOST_ARCH))
 -- | hash a password string
 mkHashedPass :: (Functor m, MonadIO m) =>
                 Text         -- ^ password in plain text
