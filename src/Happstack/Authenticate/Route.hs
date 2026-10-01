@@ -1,3 +1,4 @@
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 module Happstack.Authenticate.Route where
 
@@ -19,6 +20,9 @@ import Happstack.Authenticate.Handlers
 import Happstack.Server (internalServerError, notFound, ok, method, Method(POST), Response, ServerPartT, ToMessage(toResponse))
 import Happstack.Server.FileServe (serveFile, asContentType)
 import Happstack.Server.JMacro ()
+import Control.Monad                (MonadPlus)
+import Happstack.Server             (ServerMonad(askRq), FilterMonad, rqInputsQuery)
+import System.FilePath              (takeDirectory, (</>))
 import Language.Javascript.JMacro (JStat)
 import Prelude (($), (.), Bool(True), FilePath, fromIntegral, Functor(..), Integral(mod), IO, map, mapM, Monad(return), sequence_, unzip3)
 import Prelude hiding (sequence)
@@ -28,6 +32,18 @@ import Web.Routes (RouteT)
 ------------------------------------------------------------------------------
 -- route
 ------------------------------------------------------------------------------
+
+
+-- | Serve a client script, or -- when the URL has a @wasm@ query
+-- parameter, as the wasm build's all.js uses to fetch its program -- the
+-- @all.wasm@ next to it.
+serveClientScript :: (ServerMonad m, FilterMonad Response m, MonadIO m, MonadPlus m)
+                  => String -> FilePath -> m Response
+serveClientScript contentType p =
+  do rq <- askRq
+     case lookup "wasm" (rqInputsQuery rq) of
+       Just _  -> serveFile (asContentType "application/wasm") (takeDirectory p </> "all.wasm")
+       Nothing -> serveFile (asContentType contentType) p
 
 route :: AuthenticationHandlers
       -> AcidState AuthenticateState
@@ -45,7 +61,7 @@ route authenticationHandlers authenticateState authenticateConfigTV url =
          do ac <- liftIO $ atomically $ readTVar authenticateConfigTV
             case _happstackAuthenticateClientPath ac of
               Nothing -> internalServerError $ toResponse "path to happstack-authenticate-client not configured"
-              (Just p) -> serveFile (asContentType "text/javascript") p
+              (Just p) -> serveClientScript "text/javascript" p
        Logout ->
          do method [POST]
             deleteTokenCookie
