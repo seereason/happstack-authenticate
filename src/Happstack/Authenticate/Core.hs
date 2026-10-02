@@ -148,6 +148,7 @@ import qualified Data.Text             as Text
 import qualified Data.Text.Encoding    as Text
 import Data.UserId                     (UserId(..), rUserId, succUserId, unUserId)
 import GHC.Generics                    (Generic)
+import Unicode.Char.Identifiers.Security (confusablePrototype)
 import Prelude                         hiding ((.), id, exp)
 import System.IO                       (IOMode(ReadMode), withFile)
 import Text.Boomerang.TH               (makeBoomerangs)
@@ -167,12 +168,14 @@ data HappstackAuthenticateI18N = HappstackAuthenticateI18N
 -- UsernameProblem
 ------------------------------------------------------------------------------
 
--- | the specific way in which a 'Username' failed 'usernamePolicy'. Kept as
+-- | the specific way in which a 'Username' was rejected -- either by
+-- 'usernamePolicy' or by the uniqueness check in 'createUser'. Kept as
 -- its own type (rather than a free-form 'Text' message) so that each reason
 -- can be translated via the I18N system instead of always being in English.
 data UsernameProblem
   = UsernameEmpty
   | UsernameHasWhitespace
+  | UsernameTooSimilarToExisting
     deriving (Eq, Ord, Read, Show, Data, Typeable, Generic)
 instance ToJSON   UsernameProblem where toJSON    = genericToJSON    jsonOptions
 instance FromJSON UsernameProblem where parseJSON = genericParseJSON jsonOptions
@@ -227,6 +230,33 @@ instance FromJSON Username where parseJSON v = Username <$> parseJSON v
 instance PathInfo Username where
     toPathSegments (Username t) = toPathSegments t
     fromPathSegments = Username <$> fromPathSegments
+
+-- | fold a single character to its canonical stand-in according to the
+-- Unicode Consortium's confusables database (UTS #39), which is what
+-- 'usernameSkeleton' uses to detect the kind of look-alike-character
+-- trick used in IDN-homograph / phishing attacks, e.g. registering
+-- "аdmin" with a Cyrillic \'а\' (U+0430) in place of the Latin \'a\'.
+--
+-- 'confusablePrototype' returns \"\" for a character that has no
+-- confusable entry, in which case the character is passed through
+-- unchanged.
+usernameConfusableFold :: Char -> String
+usernameConfusableFold c =
+  case confusablePrototype c of
+    "" -> [c]
+    p  -> p
+
+-- | a canonical form of a 'Username' used to detect names that are
+-- confusingly similar to each other -- differing only in letter case, or
+-- substituting look-alike characters from another script (see
+-- 'usernameConfusableFold'). Two usernames with the same skeleton should
+-- be treated as a collision.
+usernameSkeleton :: Username -> Text
+usernameSkeleton (Username t) = Text.toCaseFold (Text.pack (concatMap usernameConfusableFold (Text.unpack t)))
+
+-- | are two 'Username's confusingly similar to each other? See 'usernameSkeleton'.
+usernamesSimilar :: Username -> Username -> Bool
+usernamesSimilar u1 u2 = usernameSkeleton u1 == usernameSkeleton u2
 
 ------------------------------------------------------------------------------
 -- Email

@@ -272,12 +272,14 @@ createUser :: User
 createUser u =
     do as@AuthenticateState{..} <- get
        if IxSet.null $ (as ^. users) @= (u ^. username)
-         then do let user' = set userId _nextUserId u
-                     as' = as { _users      = IxSet.insert user' _users
-                              , _nextUserId = succ _nextUserId
-                              }
-                 put as'
-                 return (Right user')
+         then if any (usernamesSimilar (u ^. username) . view username) (IxSet.toList _users)
+              then return (Left (UsernameNotAcceptable UsernameTooSimilarToExisting))
+              else do let user' = set userId _nextUserId u
+                          as' = as { _users      = IxSet.insert user' _users
+                                   , _nextUserId = succ _nextUserId
+                                   }
+                      put as'
+                      return (Right user')
          else
              return (Left UsernameAlreadyExists)
 

@@ -110,6 +110,7 @@ Library
                        safecopy                     >= 0.8  && < 0.11,
                        shakespeare                  >= 2.0  && < 2.3,
                        text                         >= 0.11 && < 2.2,
+                       unicode-data-security        >= 0.4  && < 0.8,
                        userid                       >= 0.1  && < 0.2,
                        web-routes                   >= 0.26 && < 0.28,
                        web-routes-boomerang         >= 0.28 && < 0.29,
