@@ -5,7 +5,7 @@ AuthorizationRequired: Authorization required.
 Forbidden: Forbidden.
 JSONDecodeFailed: Failed to decode JSON data.
 InvalidUserId: Invalid UserId
-UsernameNotAcceptable: Username not acceptable.
+UsernameNotAcceptable reason@UsernameProblem: Username not acceptable. #{renderMessage HappstackAuthenticateI18N ["en"] reason}
 InvalidEmail: Invalid email address.
 
 

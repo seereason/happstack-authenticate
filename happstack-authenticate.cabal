@@ -1,6 +1,6 @@
 Cabal-version:       2.2
 Name:                happstack-authenticate
-Version:             3.1.2
+Version:             3.1.3
 Synopsis:            Happstack Authentication Library
 Description:         A themeable authentication library with support for username+password
 Homepage:            http://www.happstack.com/
@@ -14,6 +14,7 @@ Build-type:          Simple
 tested-with:         GHC==8.0.2, GHC==8.2.2, GHC==8.4.4, GHC==8.6.5, GHC==8.8.4, GHC==8.10.7, GHC==9.0.2, GHC==9.2.2
 data-files:
   messages/core/en.msg
+  messages/username-problem/en.msg
   messages/openid/error/en.msg
   messages/openid/partials/en.msg
   messages/password/error/en.msg
@@ -50,7 +51,7 @@ common shared-ghcjs-properties
                      , lens
                      , mtl
                      , safecopy
-                     , shakespeare                  >= 2.0  && < 2.2
+                     , shakespeare                  >= 2.0  && < 2.3
                      , stm
                      , text
                      , template-haskell
@@ -100,14 +101,14 @@ Library
   Build-depends:       base                         > 4     && < 5,
                        bytestring                   >= 0.9  && < 0.13,
                        base64-bytestring            >= 1.0  && < 1.3,
-                       aeson                        (>= 0.4  && < 0.10) || (>= 0.11 && < 1.6) || (>= 2.0 && < 2.3),
+                       aeson                        (>= 0.4  && < 0.10) || (>= 0.11 && < 1.6) || (>= 2.0 && < 2.4),
                        boomerang                    >= 1.4  && < 1.5,
                        containers                   >= 0.4  && < 0.9,
-                       ixset-typed                  >= 0.3  && < 0.6,
+                       ixset-typed                  >= 0.3  && < 0.7,
                        lens                         >= 4.2  && < 5.4,
                        mtl                          >= 2.0  && < 2.4,
                        safecopy                     >= 0.8  && < 0.11,
-                       shakespeare                  >= 2.0  && < 2.2,
+                       shakespeare                  >= 2.0  && < 2.3,
                        text                         >= 0.11 && < 2.2,
                        userid                       >= 0.1  && < 0.2,
                        web-routes                   >= 0.26 && < 0.28,
@@ -134,11 +135,29 @@ Library
                        hsx-jmacro                   >= 7.3  && < 7.4,
                        mime-mail                    >= 0.4  && < 0.6,
                        pwstore-purehaskell          == 2.1.*,
+                       SHA                          >= 1.6  && < 1.7,
                        stm                          >= 2.4  && < 2.6,
-                       time                         >= 1.2  && < 1.16,
+                       time                         >= 1.2  && < 1.17,
                        random                       >= 1.0  && < 1.4,
                        unordered-containers         == 0.2.*,
                        web-routes-happstack         == 0.23.*,
+
+test-suite happstack-authenticate-test
+  import:              shared-properties
+  type:                exitcode-stdio-1.0
+  hs-source-dirs:      test
+  main-is:             Spec.hs
+  if impl(ghcjs) || flag(arch_javascript)
+    buildable: False
+  else
+    build-depends:       base
+                       , happstack-authenticate
+                       , acid-state                   >= 0.6  && < 0.17
+                       , containers                   >= 0.4  && < 0.9
+                       , directory                    >= 1.2  && < 1.4
+                       , filepath                     >= 1.3  && < 1.6
+                       , lens                         >= 4.2  && < 5.4
+                       , userid                       >= 0.1  && < 0.2
 
 executable happstack-authenticate-client
   import: shared-ghcjs-properties

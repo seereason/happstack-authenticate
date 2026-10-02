@@ -885,8 +885,13 @@ clearUser routeFn modelTV =
      doRedraws modelTV
 
 -- foreign import javascript unsafe "turnstile.render($1, { sitekey: $2, callback: function(token) {console.log('turnstile success', token);} })"
+#if __GHCJS__
 foreign import javascript unsafe "turnstile.render($1, { sitekey: $2, callback: $3 })"
   js_turnstileRender :: JSString -> JSString -> Callback (JSVal -> IO ()) -> IO JSVal
+#elif defined(javascript_HOST_ARCH)
+foreign import javascript unsafe "(($1, $2, $3) => { return turnstile.render($1, { sitekey: $2, callback: $3 }); })"
+  js_turnstileRender :: JSString -> JSString -> Callback (JSVal -> IO ()) -> IO JSVal
+#endif
 
 -- NOTE: instead of selector, render can also take an implementation of HTMLElement
 -- we should implement a binding to that version as well
@@ -1155,58 +1160,17 @@ mapNodes f nodeList =
                                  pure (x:xs)
            | otherwise = pure []
 
-
-
-#if defined(wasm32_HOST_ARCH)
--- The wasm glue is a strict-mode module: define the global explicitly.
-foreign import javascript unsafe "globalThis.initHappstackAuthenticateClient = $1"
-#else
-foreign import javascript unsafe "initHappstackAuthenticateClient = $1"
-#endif
-  set_initHappstackAuthenticateClient :: JSVal -> IO ()
-{-
-foreign import javascript unsafe "happstackAuthenticateClientPlugins = $1"
-  js_setHappstackAuthenticateClientPlugins :: JSVal -> IO ()
-
-setHappstackAuthenticateClientPlugins :: TVar [(Text, SignupPlugin)] -> IO (Export (TVar [(Text, SignupPlugin)]))
-setHappstackAuthenticateClientPlugins tvar =
-  do e <- export tvar
-     js_setHappstackAuthenticateClientPlugins (jsval e)
-     pure e
-
--- FIXME: this should be Nullable, but it seems to throw a runtime error. So
--- I guess I am not using Nullable correctly
-#if defined(wasm32_HOST_ARCH)
-foreign import javascript unsafe "let $r; $r = happstackAuthenticateClientPlugins; return $r;"
-#else
-foreign import javascript unsafe "$r = happstackAuthenticateClientPlugins"
-#endif
-  js_getHappstackAuthenticateClientPlugins :: IO (Nullable JSVal)
-
-getHappstackAuthenticateClientPlugins :: IO (Maybe (TVar [(Text, SignupPlugin)]))
-getHappstackAuthenticateClientPlugins =
-  do nJsval <- js_getHappstackAuthenticateClientPlugins
-     case nullableToMaybe nJsval of
-       Nothing -> pure Nothing
-       (Just js) -> derefExport (unsafeCoerce js)
-
-
-appendHappstackAuthenticateClientPlugin :: (Text, SignupPlugin) -> IO (Either Text ())
-appendHappstackAuthenticateClientPlugin newPlugin =
-  do mhacp <-getHappstackAuthenticateClientPlugins
-     case mhacp of
-       Nothing -> pure $ Left "happstackAuthenticateClientPlugins"
-       (Just hacp) ->
-         do atomically $ modifyTVar' hacp $ \ps -> ps ++ [newPlugin]
-            pure $ Right ()
--}
-
 #if defined(wasm32_HOST_ARCH)
 foreign import javascript unsafe "globalThis.happstackAuthenticateClientPlugins = $1"
-#else
-foreign import javascript unsafe "happstackAuthenticateClientPlugins = $1"
-#endif
   js_setHappstackAuthenticateClientPlugins :: JSVal -> IO ()
+#elif __GHCJS__
+foreign import javascript unsafe "happstackAuthenticateClientPlugins = $1"
+  js_setHappstackAuthenticateClientPlugins :: JSVal -> IO ()
+#elif defined(javascript_HOST_ARCH)
+foreign import javascript unsafe
+  "((x) => { globalThis.happstackAuthenticateClientPlugins = x; })"
+  js_setHappstackAuthenticateClientPlugins :: JSVal -> IO ()
+#endif
 
 setHappstackAuthenticateClientPlugins :: [(Text, SignupPlugin)] -> IO (Export [(Text, SignupPlugin)])
 setHappstackAuthenticateClientPlugins sps =
@@ -1218,10 +1182,15 @@ setHappstackAuthenticateClientPlugins sps =
 -- I guess I am not using Nullable correctly
 #if defined(wasm32_HOST_ARCH)
 foreign import javascript unsafe "let $r; $r = happstackAuthenticateClientPlugins; return $r;"
-#else
-foreign import javascript unsafe "$r = happstackAuthenticateClientPlugins"
-#endif
   js_getHappstackAuthenticateClientPlugins :: IO JSVal
+#elif __GHCJS__
+foreign import javascript unsafe "$r = happstackAuthenticateClientPlugins"
+  js_getHappstackAuthenticateClientPlugins :: IO JSVal
+#elif defined(javascript_HOST_ARCH)
+foreign import javascript unsafe
+  "(() => globalThis.happstackAuthenticateClientPlugins)"
+  js_getHappstackAuthenticateClientPlugins :: IO JSVal
+#endif
 
 getHappstackAuthenticateClientPlugins :: IO (Maybe [(Text, SignupPlugin)])
 getHappstackAuthenticateClientPlugins =

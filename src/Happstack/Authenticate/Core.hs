@@ -164,6 +164,24 @@ jsonOptions = defaultOptions { fieldLabelModifier = drop 1 }
 data HappstackAuthenticateI18N = HappstackAuthenticateI18N
 
 ------------------------------------------------------------------------------
+-- UsernameProblem
+------------------------------------------------------------------------------
+
+-- | the specific way in which a 'Username' failed 'usernamePolicy'. Kept as
+-- its own type (rather than a free-form 'Text' message) so that each reason
+-- can be translated via the I18N system instead of always being in English.
+data UsernameProblem
+  = UsernameEmpty
+  | UsernameHasWhitespace
+    deriving (Eq, Ord, Read, Show, Data, Typeable, Generic)
+instance ToJSON   UsernameProblem where toJSON    = genericToJSON    jsonOptions
+instance FromJSON UsernameProblem where parseJSON = genericParseJSON jsonOptions
+
+deriveSafeCopy 0 'base ''UsernameProblem
+
+mkMessageFor "HappstackAuthenticateI18N" "UsernameProblem" "messages/username-problem" ("en")
+
+------------------------------------------------------------------------------
 -- CoreError
 ------------------------------------------------------------------------------
 
@@ -178,7 +196,7 @@ data CoreError
   | Forbidden
   | JSONDecodeFailed
   | InvalidUserId
-  | UsernameNotAcceptable
+  | UsernameNotAcceptable { coreErrorMessageReason :: UsernameProblem }
   | InvalidEmail
   | TextError Text
     deriving (Eq, Ord, Read, Show, Data, Typeable, Generic)

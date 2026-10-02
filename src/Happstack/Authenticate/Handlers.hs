@@ -79,12 +79,17 @@ makeLenses ''AuthenticateConfig
 -- Enforces:
 --
 --  'Username' can not be empty
+--
+--  'Username' can not have leading or trailing whitespace
 usernamePolicy :: Username
                -> Maybe CoreError
 usernamePolicy username =
-    if Text.null $ username ^. unUsername
-    then Just UsernameNotAcceptable
-    else Nothing
+    let t = username ^. unUsername
+    in if Text.null t
+       then Just (UsernameNotAcceptable UsernameEmpty)
+       else if Text.strip t /= t
+            then Just (UsernameNotAcceptable UsernameHasWhitespace)
+            else Nothing
 
 ------------------------------------------------------------------------------
 -- SharedSecret
@@ -310,11 +315,25 @@ deleteUser uid =
      put as'
 
 -- | look up a 'User' by their 'Username'
+--
+-- An exact match is tried first. Failing that, leading and trailing
+-- whitespace in the supplied 'Username' is stripped and the lookup is
+-- retried, so that users who type extra whitespace (or who are used
+-- to typing whitespace that was part of their username before
+-- 'usernamePolicy' forbid it) can still log in.
+--
+-- The exact match is tried first so that, in the rare case where two
+-- accounts differ only by leading\/trailing whitespace (which
+-- 'trimUsernames' will have left alone, since trimming one of them
+-- would collide with the other), both accounts remain reachable by
+-- typing their username exactly.
 getUserByUsername :: Username
                   -> Query AuthenticateState (Maybe User)
-getUserByUsername username =
+getUserByUsername name@(Username t) =
     do us <- view users
-       return $ getOne $ us @= username
+       case getOne (us @= name) of
+         (Just u) -> return (Just u)
+         Nothing  -> return $ getOne $ us @= Username (Text.strip t)
 
 -- | look up a 'User' by their 'UserId'
 getUserByUserId :: UserId
@@ -351,6 +370,32 @@ getUsersByEmail email =
 getAuthenticateState :: Query AuthenticateState AuthenticateState
 getAuthenticateState = ask
 
+-- | trim leading and trailing whitespace from every stored 'Username'.
+--
+-- This migrates accounts that were created before 'usernamePolicy'
+-- forbid whitespace in usernames. If trimming a username would
+-- collide with another existing user's username, that user is left
+-- untouched (this should not normally happen, since usernames are
+-- meant to be unique).
+--
+-- Returns the 'UserId's of the users that were updated. Safe to run
+-- more than once -- once all usernames are trimmed, subsequent runs
+-- are a no-op.
+trimUsernames :: Update AuthenticateState [UserId]
+trimUsernames =
+  do as@AuthenticateState{..} <- get
+     let padded = [ u | u <- IxSet.toList _users
+                      , Text.strip (u ^. username ^. unUsername) /= u ^. username ^. unUsername
+                      ]
+         trim (st, trimmedIds) u =
+           let trimmedName = Username (Text.strip (u ^. username ^. unUsername))
+           in if IxSet.null (st @= trimmedName)
+              then (IxSet.updateIx (u ^. userId) (set username trimmedName u) st, u ^. userId : trimmedIds)
+              else (st, trimmedIds)
+         (users', trimmedIds) = foldl trim (_users, []) padded
+     put as { _users = users' }
+     return trimmedIds
+
 makeAcidic ''AuthenticateState
     [ 'setDefaultSessionTimeout
     , 'getDefaultSessionTimeout
@@ -370,6 +415,7 @@ makeAcidic ''AuthenticateState
     , 'getAuthenticateState
     , 'setTurnstile
     , 'getTurnstile
+    , 'trimUsernames
     ]
 
 ------------------------------------------------------------------------------
