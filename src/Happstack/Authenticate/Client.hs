@@ -885,7 +885,10 @@ clearUser routeFn modelTV =
      doRedraws modelTV
 
 -- foreign import javascript unsafe "turnstile.render($1, { sitekey: $2, callback: function(token) {console.log('turnstile success', token);} })"
-#if __GHCJS__
+#if defined(wasm32_HOST_ARCH)
+foreign import javascript unsafe "return turnstile.render($1, { sitekey: $2, callback: $3 });"
+  js_turnstileRender :: JSString -> JSString -> Callback (JSVal -> IO ()) -> IO JSVal
+#elif __GHCJS__
 foreign import javascript unsafe "turnstile.render($1, { sitekey: $2, callback: $3 })"
   js_turnstileRender :: JSString -> JSString -> Callback (JSVal -> IO ()) -> IO JSVal
 #elif defined(javascript_HOST_ARCH)
